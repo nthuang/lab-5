@@ -1,9 +1,12 @@
 ---
 title: "Lab 5: Murder in SQL City"
-author: "Your name here!"
+author: "Nathan Huang"
 format: html
 editor: source
 embed-resources: true
+code-tools: true
+echo: true
+code-fold: true
 ---
 
 For this lab, you will be joining and filtering related datasets to solve a murder mystery!
@@ -56,14 +59,125 @@ Detective Wickham reaches out to you...
 
 ```{r}
 #| label: inspecting-crime-scene-report
-
+crime_scene_report |>
+  filter(date == 20180115 & type == "murder" & city == "SQL City") |>
+  pull(description)
 ```
-
 
 **Follow the evidence to the person responsible for the murder, building a report as you go.**
 Hint: Make sure you check for interviews with any suspects!
+```{r}
+#| label: witness 1 
+#address match to id
+person |>
+  filter(address_street_name == "Northwestern Dr",
+         address_number == max(address_number)) |>
+  pull(id)
 
+#id match to interview 
+interview |>
+  filter(person_id == 14887) |>
+  pull(transcript)
 
+```
+```{r}
+#Suspect 1 from Witness 1 information
+get_fit_now_member |> 
+  mutate(id = as.character(id)) |> 
+  filter(membership_status == "gold", 
+         str_detect(id, "^48Z")) |>  
+  pull(name, id)
+
+# get 2 names now check car plate match
+person |> 
+  filter(name == "Joe Germuska" | name == "Jeremy Bowers") |>
+  pull(license_id)
+
+drivers_license |>
+  filter(id == 173289	| id == 423327)|>
+  filter(str_detect(plate_number, "H42W")) |>
+  pull(id)
+
+person |> 
+  filter(license_id == 423327) |>
+  pull(id, name)
+
+#Suspect 1 is Jeremy Bowers
+```
+```{r}
+#| label: witness 2
+
+#address match to id
+person |>
+  filter(str_detect(name, "Annabel"),
+         address_street_name == "Franklin Ave") |>
+    pull(id)
+
+#id match to interview 
+interview |>
+  filter(person_id == 16371) |>
+  pull(transcript)
+
+```
+```{r}
+#Suspect 2 from Witness 2 information
+get_fit_now_check_in |> 
+  filter(check_in_date == 20180109)
+#Suspect 1 Jeremy Bowers membership_id 48Z55 is on this list 
+#witness 1 and 2 saw Jeremy Bowers
+
+```
+
+```{r}
+#check interview with Jeremy Bowers and follow story
+interview |> 
+  filter(person_id == 67318 ) |>
+  pull(transcript)
+
+```
+```{r}
+#find the person who hired Jeremy Bowers
+
+#match dl information
+drivers_license |>
+  filter(height >= 65,
+         height <= 67,
+         hair_color == "red",
+         car_make == "Tesla",
+         car_model == "Model S") |>
+  pull(id)
+
+#check which one attended the SQL Symphony Concert 3 times in December 2017
+facebook_event_checkin |> 
+  mutate(date = ymd(date)) |>
+  filter(event_name == "SQL Symphony Concert",
+         month(date) == 12,
+         year(date) == 2017) |>
+  group_by(person_id) |>
+  summarise(attendance_count = n()) |>  # Count check-ins per person
+  filter(attendance_count >= 3) |>
+  pull(person_id)
+
+person |>
+  filter(license_id == 202298 | 
+           license_id == 291182 |
+         license_id == 918773,
+         id == 24556 | 
+           id == 99716	)
+
+#person who hired Jeremy Bowers was Miranda Priestly
+```
+```{r}
+#check interview with Miranda Priestly and follow story
+interview |> 
+  filter(person_id == 99716) 
+#doesn't have an interview?
+income |>
+  filter(ssn == 987756388)
+#has lost of money check $310,000 annual income
+```
+ 
 ## And the final suspect is...
 
 *Put the name of the person responsible for the murder here:*
+Jeremy Bowers hired by Miranda Priestly
